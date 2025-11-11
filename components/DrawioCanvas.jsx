@@ -1,145 +1,136 @@
 'use client';
 
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback, forwardRef, useImperativeHandle } from 'react';
+import { getEmbedUrl } from './drawio/utils/getEmbedUrl';
+import { handleEvent } from './drawio/utils/handleEvent';
+import { useActions } from './drawio/hooks/useActions';
 
-export default function DrawioCanvas({ xml, onSave, onError }) {
+const DrawioCanvas = forwardRef(function DrawioCanvas(
+  {
+    xml,
+    onSave,
+    onError,
+    onLoad,
+    onClose,
+    onExport,
+    autosave = true,
+    baseUrl,
+    urlParameters,
+    configuration,
+    exportFormat = 'xmlsvg'
+  },
+  ref
+) {
   const iframeRef = useRef(null);
-  const [isReady, setIsReady] = useState(false);
+  const action = useActions(iframeRef);
+  const [isInitialized, setIsInitialized] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  // Draw.io embed URL with configuration
-  const drawioUrl = 'https://embed.diagrams.net/?embed=1&proto=json&spin=1&libraries=1&saveAndExit=0&noSaveBtn=0&noExitBtn=1';
+  // Generate Draw.io embed URL
+  const iframeUrl = getEmbedUrl(baseUrl, urlParameters, !!configuration);
+
+  // Expose actions to parent component via ref
+  useImperativeHandle(
+    ref,
+    () => ({
+      ...action,
+      exportDiagram: action.exportDiagram,
+      mergeDiagram: (xmlData) => action.merge({ xml: xmlData }),
+      getXml: action.getXml
+    }),
+    [action]
+  );
 
   // Handle messages from Draw.io iframe
-  const handleMessage = useCallback((event) => {
-    // Security check: only accept messages from diagrams.net
-    if (event.origin !== 'https://embed.diagrams.net') {
-      return;
-    }
-
-    const data = event.data;
-
-    // Handle string messages (legacy format)
-    if (typeof data === 'string') {
-      if (data === 'ready') {
-        setIsReady(true);
-        setIsLoading(false);
-      }
-      return;
-    }
-
-    // Handle JSON protocol messages
-    if (typeof data === 'object') {
-      switch (data.event) {
-        case 'init':
-          // Draw.io is initialized, send the diagram data
-          setIsReady(true);
+  const messageHandler = useCallback((evt) => {
+    handleEvent(
+      evt,
+      {
+        init: () => {
+          setIsInitialized(true);
           setIsLoading(false);
-          if (iframeRef.current && xml) {
-            sendLoadMessage(xml);
-          }
-          break;
-
-        case 'load':
-          // Diagram has been loaded successfully
+        },
+        load: (data) => {
           console.log('Diagram loaded:', data);
-          break;
-
-        case 'save':
-          // User clicked save button
+          if (onLoad) {
+            onLoad(data);
+          }
+        },
+        configure: () => {
+          if (configuration) {
+            action.configure({ config: configuration });
+          }
+        },
+        autosave: (data) => {
           if (onSave && data.xml) {
             onSave(data.xml);
           }
-          // If exit flag is set, handle exit
-          if (data.exit) {
-            console.log('Save and exit');
-          }
-          break;
-
-        case 'exit':
-          // User clicked exit button
+        },
+        save: (data) => {
+          // Trigger export instead of directly saving
+          action.exportDiagram({
+            format: exportFormat,
+            exit: data.exit,
+            parentEvent: 'save'
+          });
+        },
+        exit: (data) => {
           console.log('Exit:', data.modified);
-          break;
-
-        case 'autosave':
-          // Auto-save event
-          if (onSave && data.xml) {
-            onSave(data.xml);
+          if (onClose) {
+            onClose(data);
           }
-          break;
+        },
+        export: (data) => {
+          // Handle the actual save after export completes
+          if (onSave && data.data) {
+            onSave(data.data);
+          }
 
-        case 'export':
-          // Export completed
-          console.log('Export completed:', data.format);
-          break;
+          if (onExport) {
+            onExport(data);
+          }
 
-        case 'error':
-          // Error occurred
+          // Handle exit after save if requested
+          if (data.message && data.message.exit && onClose) {
+            onClose({
+              event: 'exit',
+              modified: true,
+              parentEvent: data.message.parentEvent || 'export'
+            });
+          }
+        },
+        error: (data) => {
           const errorMsg = data.message || 'Unknown error occurred';
           setError(errorMsg);
           if (onError) {
             onError(errorMsg);
           }
-          break;
-
-        default:
-          console.log('Unknown event from Draw.io:', data);
-      }
-    }
-  }, [xml, onSave, onError]);
-
-  // Send load message to Draw.io
-  const sendLoadMessage = useCallback((xmlData) => {
-    if (!iframeRef.current || !isReady) return;
-
-    const message = {
-      action: 'load',
-      xml: xmlData || '<mxGraphModel><root><mxCell id="0"/><mxCell id="1" parent="0"/></root></mxGraphModel>',
-      autosave: 1, // Enable autosave
-    };
-
-    iframeRef.current.contentWindow.postMessage(JSON.stringify(message), 'https://embed.diagrams.net');
-  }, [isReady]);
+        }
+      },
+      baseUrl
+    );
+  }, [action, configuration, exportFormat, onSave, onLoad, onClose, onExport, onError, baseUrl]);
 
   // Set up message listener
   useEffect(() => {
-    window.addEventListener('message', handleMessage);
+    window.addEventListener('message', messageHandler);
     return () => {
-      window.removeEventListener('message', handleMessage);
+      window.removeEventListener('message', messageHandler);
     };
-  }, [handleMessage]);
+  }, [messageHandler]);
 
-  // Load diagram when ready and XML changes
+  // Load diagram when initialized
   useEffect(() => {
-    if (isReady && xml) {
-      sendLoadMessage(xml);
+    if (isInitialized) {
+      const loadObject = {
+        xml: xml || '<mxGraphModel><root><mxCell id="0"/><mxCell id="1" parent="0"/></root></mxGraphModel>',
+        autosave: autosave
+      };
+
+      action.load(loadObject);
     }
-  }, [isReady, xml, sendLoadMessage]);
-
-  // Export diagram as PNG (optional utility method)
-  const exportDiagram = useCallback((format = 'png') => {
-    if (!iframeRef.current || !isReady) return;
-
-    const message = {
-      action: 'export',
-      format: format, // 'png', 'svg', 'xmlpng', 'xmlsvg'
-    };
-
-    iframeRef.current.contentWindow.postMessage(JSON.stringify(message), 'https://embed.diagrams.net');
-  }, [isReady]);
-
-  // Merge XML into current diagram (optional utility method)
-  const mergeDiagram = useCallback((xmlData) => {
-    if (!iframeRef.current || !isReady) return;
-
-    const message = {
-      action: 'merge',
-      xml: xmlData,
-    };
-
-    iframeRef.current.contentWindow.postMessage(JSON.stringify(message), 'https://embed.diagrams.net');
-  }, [isReady]);
+  }, [isInitialized, xml, autosave, action]);
 
   return (
     <div className="w-full h-full relative">
@@ -161,11 +152,13 @@ export default function DrawioCanvas({ xml, onSave, onError }) {
 
       <iframe
         ref={iframeRef}
-        src={drawioUrl}
+        src={iframeUrl}
         className="w-full h-full border-0"
         title="Draw.io Editor"
         allow="clipboard-read; clipboard-write"
       />
     </div>
   );
-}
+});
+
+export default DrawioCanvas;

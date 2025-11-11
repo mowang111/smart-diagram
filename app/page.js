@@ -214,8 +214,8 @@ export default function Home() {
           userInput: userMessage,
           generatedCode: processedCode,
           config: {
-            name: config.name || config.type,
-            model: config.model
+            name: config?.name || config?.type||'',
+            model: config?.model||''
           }
         });
       }
