@@ -190,17 +190,25 @@ export default function CombinedSettingsModal({
           {/* Body */}
           <div className="flex-1 overflow-y-auto px-5 py-4 space-y-4">
             {/* 提示文案 */}
-            <p className="text-xs text-gray-500">
-              访问密码模式的优先级高于本地 LLM
-              配置；配置成功后，在"访问密码"模式下将使用服务器端配置。
-            </p>
+            <div className="text-xs text-gray-500">
+              <p>
+              访问密码模式的优先级高于本地 LLM配置
+              </p>
+              <p>
+              {`配置成功后，在"访问密码"模式下将使用服务器端配置。`}
+              </p>
+            </div>
 
             {/* 密码输入 + 验证按钮 */}
             <div className="grid grid-cols-1 sm:grid-cols-[1fr_auto] items-center gap-2">
               <input
                 type="password"
                 value={password}
-                onChange={(e) => setPassword(e.target.value)}
+                autoComplete="new-password"
+                name="diagram-access"
+                onChange={(e) => {
+                  setPassword(e.target.value);
+                }}
                 placeholder="访问密码"
                 disabled={!usePassword}
                 className={`w-full px-3 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-gray-900 ${
