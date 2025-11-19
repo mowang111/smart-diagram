@@ -3,6 +3,9 @@
 import { useState, useCallback } from 'react';
 import { historyManager } from '@/lib/history-manager';
 import { getConfig, isConfigValid } from '@/lib/config';
+// 在 useEngineShared.js 顶部导入  
+import { promptTemplateManager } from '@/lib/prompt-template-manager';
+import { CONTINUATION_SYSTEM_PROMPT, createContinuationPrompt } from '@/lib/prompts/drawio';
 
 /**
  * 共享的引擎逻辑 Hook
@@ -96,19 +99,28 @@ export function useEngineShared() {
    * @param {number} historyLimit - 历史消息限制条数
    * @returns {Array} 完整的消息数组
    */
-  const buildFullMessages = useCallback(
-    (systemMessage, userMessage, currentMessages, historyLimit = 3) => {
-      const history = currentMessages
-        .filter(
-          (m) =>
-            ['user', 'assistant'].includes(m.role) &&
-            typeof m.content === 'string',
-        )
-        .slice(-historyLimit);
-
-      return [systemMessage, ...history, userMessage];
-    },
-    [],
+  // 修改 buildFullMessages 函数  
+  const buildFullMessages = useCallback(  
+    (systemMessage, userMessage, currentMessages, historyLimit = 3) => {  
+      // 获取当前激活的模板  
+      const activeTemplate = promptTemplateManager.getActiveTemplate();  
+        
+      // 如果有激活的模板,使用模板的 systemPrompt 覆盖默认的  
+      const finalSystemMessage = activeTemplate   
+        ? { role: 'system', content: activeTemplate.systemPrompt }  
+        : systemMessage;  
+        
+      const history = currentMessages  
+        .filter(  
+          (m) =>  
+            ['user', 'assistant'].includes(m.role) &&  
+            typeof m.content === 'string',  
+        )  
+        .slice(-historyLimit);  
+    
+      return [finalSystemMessage, ...history, userMessage];  
+    },  
+    [],  
   );
 
   /**
@@ -334,6 +346,81 @@ export function useEngineShared() {
     return baseConfig;
   }, []);
 
+  const handleContinueGeneration = useCallback(  
+    async (incompleteCode) => {  
+      if (isGenerating) return;  
+        
+      setIsGenerating(true);  
+      setStreamingContent('');  
+        
+      try {  
+        const continuationPrompt = createContinuationPrompt(incompleteCode);  
+          
+        const systemMessage = {  
+          role: 'system',  
+          content: CONTINUATION_SYSTEM_PROMPT  
+        };  
+          
+        const userMessage = {  
+          role: 'user',  
+          content: continuationPrompt  
+        };  
+          
+        const fullMessages = [systemMessage, userMessage];  
+          
+        const config = validateConfig();  
+        if (!config) {  
+          setMessages(prev => [...prev, {  
+            role: 'system',  
+            content: '❌ 请先配置 LLM'  
+          }]);  
+          return;  
+        }  
+          
+        const response = await callLLMStream(config, fullMessages);  
+        const continuedCode = await processSSEStream(  
+          response,  
+          (chunk) => setStreamingContent(chunk)  
+        );  
+
+        // 确保 incompleteCode 不包含 markdown 标记  
+        const cleanContinueCode = continuedCode.replace(/```(xml|json)?\s*/gi, '').replace(/```\s*$/gi, ''); 
+          
+        const fullCode = incompleteCode + '\n' + cleanContinueCode;  
+          
+        // 修改这里:更新最后一条 assistant 消息,而不是添加新消息  
+        setMessages(prev => {  
+          const newMessages = [...prev];  
+          // 从后往前找到最后一条 assistant 消息  
+          for (let i = newMessages.length - 1; i >= 0; i--) {  
+            if (newMessages[i].role === 'assistant') {  
+              // 更新这条消息的内容  
+              newMessages[i] = {  
+                ...newMessages[i],  
+                content: fullCode  
+              };  
+              break;  
+            }  
+          }  
+          return newMessages;  
+        });  
+        console.log('Full continued code:', fullCode);
+        setUsedCode(fullCode);  
+          
+      } catch (error) {  
+        console.error('Continue generation failed:', error);  
+        setMessages(prev => [...prev, {  
+          role: 'system',  
+          content: `❌ 继续生成失败: ${error.message}`  
+        }]);  
+      } finally {  
+        setIsGenerating(false);  
+        setStreamingContent('');  
+      }  
+    },  
+    [isGenerating, validateConfig, callLLMStream, processSSEStream]  
+  );
+
   return {
     // 状态
     usedCode,
@@ -361,5 +448,6 @@ export function useEngineShared() {
     // 操作
     handleNewChat,
     restoreHistoryBase,
+    handleContinueGeneration,  // 新增这一行  
   };
 }

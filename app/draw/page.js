@@ -8,6 +8,7 @@ import ConfigManager from '@/components/ConfigManager';
 import ContactModal from '@/components/ContactModal';
 import HistoryModal from '@/components/HistoryModal';
 import CombinedSettingsModal from '@/components/CombinedSettingsModal';
+import PromptTemplateManager from '@/components/PromptTemplateManager';
 import Notification from '@/components/Notification';
 import ConfirmDialog from '@/components/ConfirmDialog';
 import { getConfig } from '@/lib/config';
@@ -38,6 +39,7 @@ export default function DrawPage() {
   const [isContactModalOpen, setIsContactModalOpen] = useState(false);
   const [isHistoryModalOpen, setIsHistoryModalOpen] = useState(false);
   const [isCombinedSettingsOpen, setIsCombinedSettingsOpen] = useState(false);
+  const [isTemplateManagerOpen, setIsTemplateManagerOpen] = useState(false);  // 新增这一行
 
   // 确认对话框状态
   const [confirmDialog, setConfirmDialog] = useState({
@@ -234,6 +236,14 @@ export default function DrawPage() {
     showNotification({ title: '已恢复', message: '历史记录已恢复', type: 'success' });
   }, [engineType, engine, showNotification]);
 
+  /**  
+   * 继续生成处理  
+   * 调用引擎的handleContinueGeneration  
+   */  
+  const handleContinueGeneration = useCallback(async (code) => {
+    await engine.handleContinueGeneration(code);
+  }, [engine, showNotification]);
+
   /**
    * 缓存 Excalidraw elements 解析结果
    * 只有当 usedCode 真正改变时才重新解析，避免流式更新时频繁重新渲染
@@ -309,6 +319,8 @@ export default function DrawPage() {
         conversationId={engine.conversationId}
         onOpenHistory={() => setIsHistoryModalOpen(true)}
         onOpenSettings={() => setIsCombinedSettingsOpen(true)}
+        onsetTemplateManager={() => setIsTemplateManagerOpen(true)}
+        onContinueGeneration={handleContinueGeneration}  
       />
 
       {/* Config Manager Modal */}
@@ -335,6 +347,12 @@ export default function DrawPage() {
         onConfigSelect={(newConfig) => {
           setConfig(newConfig);
         }}
+      />
+
+      {/* 新增 PromptTemplateManager */}  
+      <PromptTemplateManager
+          isOpen={isTemplateManagerOpen}
+          onClose={() => setIsTemplateManagerOpen(false)}  
       />
 
       {/* Contact Modal */}

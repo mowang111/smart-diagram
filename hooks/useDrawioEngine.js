@@ -34,6 +34,7 @@ export function useDrawioEngine() {
     validateConfig,
     handleNewChat,
     restoreHistoryBase,
+    handleContinueGeneration,  // 必须从 useEngineShared 解构
   } = useEngineShared();
 
   /**
@@ -80,6 +81,10 @@ export function useDrawioEngine() {
 
     // 4) 修复常见未闭合标签问题
     processed = fixUnclosed(processed, { mode: 'xml' });
+
+    // 修正常见的标签大小写错误  
+    processed = processed.replace(/<\/mxcell>/gi, '</mxCell>');  
+    processed = processed.replace(/<\/mxgraphmodel>/gi, '</mxGraphModel>'); 
 
     return processed;
   }, []);
@@ -253,5 +258,6 @@ export function useDrawioEngine() {
     handleCanvasChange,
     handleNewChat,
     handleRestoreHistory,
+    handleContinueGeneration,  // 确保包含这个 
   };
 }

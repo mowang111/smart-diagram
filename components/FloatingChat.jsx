@@ -68,6 +68,8 @@ export default function FloatingChat({
   conversationId,
   onOpenHistory,
   onOpenSettings,
+  onsetTemplateManager,
+  onContinueGeneration,  // 添加这一行  
 }) {
   const [isOpen, setIsOpen] = useState(true);
   const panelRef = useRef(null);
@@ -411,6 +413,14 @@ export default function FloatingChat({
           <Button
             variant="ghost"
             size="icon"
+            title="模板"
+            onClick={() => onsetTemplateManager && onsetTemplateManager()}
+          >
+            <FileText className="w-4 h-4" />
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon"
             title="历史记录"
             onClick={() => onOpenHistory && onOpenHistory()}
           >
@@ -477,6 +487,7 @@ export default function FloatingChat({
                       codeText={extractCode(msg.content)}
                       onApplyCode={onApplyCode}
                       onApplyXml={onApplyXml}
+                      onContinue={onContinueGeneration} 
                     />
                   ) : (
                     <div className="relative inline-flex justify-end items-end">
@@ -780,7 +791,7 @@ function StreamingCodeBubble({ codeText }) {
   );
 }
 
-function CodeBubble({ codeText, onApplyCode, onApplyXml }) {
+function CodeBubble({ codeText, onApplyCode, onApplyXml, onContinue}) {
   const [copied, setCopied] = useState(false);
   const [expanded, setExpanded] = useState(false);
 
@@ -855,6 +866,19 @@ function CodeBubble({ codeText, onApplyCode, onApplyXml }) {
             )}
           >{codeText}</pre>
         </div>
+      )}
+
+      {/* 在 expanded 内容的最后添加继续按钮 */}  
+      {expanded && onContinue && (  
+        <div className="px-3 py-2 bg-gray-50 border-t border-gray-200">  
+          <button  
+            onClick={() => onContinue(codeText)}  
+            className="w-full px-3 py-2 bg-blue-600 text-white text-sm rounded hover:bg-blue-700 transition-colors flex items-center justify-center gap-2"  
+          >  
+            <MoveUp className="w-4 h-4" />  
+            <span>继续生成</span>  
+          </button>  
+        </div>  
       )}
     </div>
   );

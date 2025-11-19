@@ -37,4 +37,5 @@ export function useEngine(engineType) {
  * @property {Function} handleCanvasChange - 画布编辑回调
  * @property {Function} handleNewChat - 新建对话
  * @property {Function} handleRestoreHistory - 恢复历史记录
+ * @property {Function} handleContinueGeneration - 继续生成
  */
