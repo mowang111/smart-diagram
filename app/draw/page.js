@@ -245,6 +245,14 @@ export default function DrawPage() {
   }, [engine, showNotification]);
 
   /**
+   * 优化生成处理
+   * 调用引擎的handleOptimizeGeneration
+   */
+  const handleOptimizeGeneration = useCallback(async (code) => {
+    await engine.handleOptimizeGeneration(code);
+  }, [engine, showNotification]);
+
+  /**
    * 缓存 Excalidraw elements 解析结果
    * 只有当 usedCode 真正改变时才重新解析，避免流式更新时频繁重新渲染
    */
@@ -320,7 +328,8 @@ export default function DrawPage() {
         onOpenHistory={() => setIsHistoryModalOpen(true)}
         onOpenSettings={() => setIsCombinedSettingsOpen(true)}
         onsetTemplateManager={() => setIsTemplateManagerOpen(true)}
-        onContinueGeneration={handleContinueGeneration}  
+        onContinueGeneration={handleContinueGeneration}
+        onOptimizeGeneration={handleOptimizeGeneration}
       />
 
       {/* Config Manager Modal */}

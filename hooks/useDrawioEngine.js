@@ -35,6 +35,7 @@ export function useDrawioEngine() {
     handleNewChat,
     restoreHistoryBase,
     handleContinueGeneration,  // 必须从 useEngineShared 解构
+    handleOptimizeGeneration,  // 必须从 useEngineShared 解构
   } = useEngineShared();
 
   /**
@@ -259,5 +260,6 @@ export function useDrawioEngine() {
     handleNewChat,
     handleRestoreHistory,
     handleContinueGeneration,  // 确保包含这个 
+    handleOptimizeGeneration,  // 确保包含这个
   };
 }

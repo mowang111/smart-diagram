@@ -38,4 +38,5 @@ export function useEngine(engineType) {
  * @property {Function} handleNewChat - 新建对话
  * @property {Function} handleRestoreHistory - 恢复历史记录
  * @property {Function} handleContinueGeneration - 继续生成
+ * @property {Function} handleOptimizeGeneration - 优化生成
  */

@@ -6,6 +6,7 @@ import { getConfig, isConfigValid } from '@/lib/config';
 // 在 useEngineShared.js 顶部导入  
 import { promptTemplateManager } from '@/lib/prompt-template-manager';
 import { CONTINUATION_SYSTEM_PROMPT, createContinuationPrompt } from '@/lib/prompts/drawio';
+import { OPTIMIZATION_SYSTEM_PROMPT, createOptimizationPrompt } from '@/lib/prompts/drawio';
 
 /**
  * 共享的引擎逻辑 Hook
@@ -421,6 +422,67 @@ export function useEngineShared() {
     [isGenerating, validateConfig, callLLMStream, processSSEStream]  
   );
 
+  const handleOptimizeGeneration = useCallback(  
+    async (currentCode) => {  
+      if (isGenerating) return;  
+        
+      setIsGenerating(true);  
+      setStreamingContent('');  
+        
+      try {  
+        const optimizationPrompt = createOptimizationPrompt(currentCode);
+          
+        const systemMessage = {  
+          role: 'system',  
+          content: OPTIMIZATION_SYSTEM_PROMPT
+        };  
+          
+        const userMessage = {  
+          role: 'user',  
+          content: optimizationPrompt  
+        };  
+          
+        const fullMessages = [systemMessage, userMessage]; 
+        
+        const config = validateConfig();
+        if (!config) {
+          setMessages(prev => [...prev, {
+            role: 'system',
+            content: '❌ 请先配置 LLM'
+          }]);
+          return;
+        }
+          
+        const response = await callLLMStream(config, fullMessages);  
+        const optimizedCode = await processSSEStream(  
+          response,  
+          (chunk) => setStreamingContent(chunk)  
+        );  
+          
+        // 确保 optimizedCode 不包含 markdown 标记  
+        const cleanOptimizedCode = optimizedCode.replace(/```(xml|json)?\s*/gi, '').replace(/```\s*$/gi, ''); 
+          
+        // 添加新的消息
+        setMessages(prev => [...prev, {  
+          role: 'assistant',  
+          content: cleanOptimizedCode  
+        }]);  
+        setUsedCode(cleanOptimizedCode);
+          
+      } catch (error) {  
+        console.error('Optimize generation failed:', error);  
+        setMessages(prev => [...prev, {  
+          role: 'system',  
+          content: `❌ 优化生成失败: ${error.message}`  
+        }]);  
+      } finally {  
+        setIsGenerating(false);  
+        setStreamingContent('');  
+      }  
+    },  
+    [isGenerating, validateConfig, callLLMStream, processSSEStream]  
+  );
+
   return {
     // 状态
     usedCode,
@@ -449,5 +511,6 @@ export function useEngineShared() {
     handleNewChat,
     restoreHistoryBase,
     handleContinueGeneration,  // 新增这一行  
+    handleOptimizeGeneration,  // 新增这一行
   };
 }
