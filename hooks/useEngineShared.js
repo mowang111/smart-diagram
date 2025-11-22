@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useRef } from 'react';
 import { historyManager } from '@/lib/history-manager';
 import { getConfig, isConfigValid } from '@/lib/config';
 // 在 useEngineShared.js 顶部导入  
@@ -24,6 +24,7 @@ export function useEngineShared() {
   const [streamingContent, setStreamingContent] = useState('');
   const [conversationId, setConversationId] = useState(newConversationId());
   const [lastError, setLastError] = useState(null);
+  const optimizeCodeRef = useRef(''); 
 
   /**
    * 将图片文件转为 base64
@@ -422,15 +423,21 @@ export function useEngineShared() {
     [isGenerating, validateConfig, callLLMStream, processSSEStream]  
   );
 
+  const setOptimizationCode = useCallback((code) => {  
+    optimizeCodeRef.current = code; // 更新 ref
+  }, []);
+
   const handleOptimizeGeneration = useCallback(  
-    async (currentCode) => {  
+    async (suggestion) => {  
       if (isGenerating) return;  
         
       setIsGenerating(true);  
       setStreamingContent('');  
+
+      const currentCode = optimizeCodeRef.current;
         
       try {  
-        const optimizationPrompt = createOptimizationPrompt(currentCode);
+        const optimizationPrompt = createOptimizationPrompt(currentCode, suggestion);
           
         const systemMessage = {  
           role: 'system',  
@@ -512,5 +519,6 @@ export function useEngineShared() {
     restoreHistoryBase,
     handleContinueGeneration,  // 新增这一行  
     handleOptimizeGeneration,  // 新增这一行
+    setOptimizationCode,  // 新增这一行
   };
 }

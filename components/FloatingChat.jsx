@@ -69,8 +69,9 @@ export default function FloatingChat({
   onOpenHistory,
   onOpenSettings,
   onsetTemplateManager,
-  onContinueGeneration,  // 添加这一行  
-  onOptimizeGeneration,  // 添加这一行
+  onContinueGeneration,  // 添加这一行 
+  onOpenOptimization,
+  setCode,
 }) {
   const [isOpen, setIsOpen] = useState(true);
   const panelRef = useRef(null);
@@ -488,8 +489,9 @@ export default function FloatingChat({
                       codeText={extractCode(msg.content)}
                       onApplyCode={onApplyCode}
                       onApplyXml={onApplyXml}
-                      onContinue={onContinueGeneration} 
-                      onOptimize={onOptimizeGeneration}
+                      onContinue={onContinueGeneration}
+                      onOptimize={onOpenOptimization}
+                      setCode={setCode}
                     />
                   ) : (
                     <div className="relative inline-flex justify-end items-end">
@@ -793,7 +795,7 @@ function StreamingCodeBubble({ codeText }) {
   );
 }
 
-function CodeBubble({ codeText, onApplyCode, onApplyXml, onContinue, onOptimize }) {
+function CodeBubble({ codeText, onApplyCode, onApplyXml, onContinue, onOptimize, setCode }) {
   const [copied, setCopied] = useState(false);
   const [expanded, setExpanded] = useState(false);
 
@@ -883,10 +885,13 @@ function CodeBubble({ codeText, onApplyCode, onApplyXml, onContinue, onOptimize 
         </div>  
       )}
       {/* 在 expanded 内容的最后添加继续按钮 */}  
-      {expanded && onOptimize && (  
+      {expanded && onOptimize &&(  
         <div className="px-3 py-2 bg-gray-50 border-t border-gray-200">  
           <button  
-            onClick={() => onOptimize(codeText)}  
+            onClick={() => {
+              setCode(codeText);
+              onOptimize();
+            }}
             className="w-full px-3 py-2 bg-blue-600 text-white text-sm rounded hover:bg-blue-700 transition-colors flex items-center justify-center gap-2"  
           >  
             <MoveUp className="w-4 h-4" />  

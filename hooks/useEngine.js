@@ -39,4 +39,5 @@ export function useEngine(engineType) {
  * @property {Function} handleRestoreHistory - 恢复历史记录
  * @property {Function} handleContinueGeneration - 继续生成
  * @property {Function} handleOptimizeGeneration - 优化生成
+ * @property {Function} setOptimizationCode - 设置优化建议代码
  */

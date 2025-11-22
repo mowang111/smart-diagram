@@ -36,6 +36,7 @@ export function useDrawioEngine() {
     restoreHistoryBase,
     handleContinueGeneration,  // 必须从 useEngineShared 解构
     handleOptimizeGeneration,  // 必须从 useEngineShared 解构
+    setOptimizationCode,  // 必须从 useEngineShared 解构
   } = useEngineShared();
 
   /**
@@ -261,5 +262,6 @@ export function useDrawioEngine() {
     handleRestoreHistory,
     handleContinueGeneration,  // 确保包含这个 
     handleOptimizeGeneration,  // 确保包含这个
+    setOptimizationCode,  // 必须从 useEngineShared 解构
   };
 }

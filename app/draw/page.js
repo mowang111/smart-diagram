@@ -9,6 +9,7 @@ import ContactModal from '@/components/ContactModal';
 import HistoryModal from '@/components/HistoryModal';
 import CombinedSettingsModal from '@/components/CombinedSettingsModal';
 import PromptTemplateManager from '@/components/PromptTemplateManager';
+import OptimizationModal from '@/components/OptimizationModal';
 import Notification from '@/components/Notification';
 import ConfirmDialog from '@/components/ConfirmDialog';
 import { getConfig } from '@/lib/config';
@@ -40,6 +41,7 @@ export default function DrawPage() {
   const [isHistoryModalOpen, setIsHistoryModalOpen] = useState(false);
   const [isCombinedSettingsOpen, setIsCombinedSettingsOpen] = useState(false);
   const [isTemplateManagerOpen, setIsTemplateManagerOpen] = useState(false);  // 新增这一行
+  const [isOptimizeModalOpen, setIsOptimizeModalOpen] = useState(false);
 
   // 确认对话框状态
   const [confirmDialog, setConfirmDialog] = useState({
@@ -244,12 +246,17 @@ export default function DrawPage() {
     await engine.handleContinueGeneration(code);
   }, [engine, showNotification]);
 
+
+  const setOptimizationCode = useCallback((code) => {  
+    engine.setOptimizationCode(code);  
+  }, [engine]);
+
   /**
    * 优化生成处理
    * 调用引擎的handleOptimizeGeneration
    */
-  const handleOptimizeGeneration = useCallback(async (code) => {
-    await engine.handleOptimizeGeneration(code);
+  const handleOptimizeGeneration = useCallback(async (suggestion) => {
+    await engine.handleOptimizeGeneration(suggestion);
   }, [engine, showNotification]);
 
   /**
@@ -329,7 +336,8 @@ export default function DrawPage() {
         onOpenSettings={() => setIsCombinedSettingsOpen(true)}
         onsetTemplateManager={() => setIsTemplateManagerOpen(true)}
         onContinueGeneration={handleContinueGeneration}
-        onOptimizeGeneration={handleOptimizeGeneration}
+        onOpenOptimization={() => setIsOptimizeModalOpen(true) }
+        setCode={setOptimizationCode}
       />
 
       {/* Config Manager Modal */}
@@ -362,6 +370,12 @@ export default function DrawPage() {
       <PromptTemplateManager
           isOpen={isTemplateManagerOpen}
           onClose={() => setIsTemplateManagerOpen(false)}  
+      />
+
+      <OptimizationModal  
+        isOpen={isOptimizeModalOpen}  
+        onClose={() => setIsOptimizeModalOpen(false)}  
+        onApply={(suggestion) => handleOptimizeGeneration(suggestion)}
       />
 
       {/* Contact Modal */}

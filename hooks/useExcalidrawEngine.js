@@ -36,6 +36,8 @@ export function useExcalidrawEngine() {
     handleNewChat,
     restoreHistoryBase,
     handleContinueGeneration,  // 必须添加这一行  
+    handleOptimizeGeneration,  // 必须添加这一行
+    setOptimizationCode,  // 必须添加这一行
   } = useEngineShared();
 
   /**
@@ -272,5 +274,7 @@ export function useExcalidrawEngine() {
     handleNewChat,
     handleRestoreHistory,
     handleContinueGeneration,  // 必须添加这一行  
+    handleOptimizeGeneration,  // 必须添加这一行
+    setOptimizationCode,  // 必须添加这一行
   };
 }
